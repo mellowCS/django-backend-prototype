@@ -17,16 +17,23 @@ EXPOSE 8000
 
 ARG DEV=false
 # Create a virtual environment so that none of the docker image python dependencies
-# conflict with the project python dependencies
-# Clear the temp dir after using it to keep the image as light as possible
-# Add a user without root access for security reasons
+# conflict with the project python dependencies.
+# Install the postgres client and the build dependencies for the postgres python adapter.
+# The dependencies are put into a virtual dependencies folder which makes the cleaning easier.
+# Clean up the build dependencies afterwards as they are not needed for running postgres.
+# Clear the temp dir after using it to keep the image as light as possible.
+# Add a user without root access for security reasons.
 RUN python -m venv /py && \
     /py/bin/pip install --upgrade pip && \
+    apk add --update --no-cache postgresql-client && \
+    apk add --update --no-cache --virtual .tmp-build-deps \
+        build-base postgresql-dev musl-dev && \
     /py/bin/pip install -r /tmp/requirements.txt && \
     if [ $DEV = "true" ]; \
         then /py/bin/pip install -r /tmp/requirements.dev.txt ; \
     fi && \
     rm -rf /tmp && \
+    apk del .tmp-build-deps && \
     adduser \
         --disabled-password \
         --no-create-home \
